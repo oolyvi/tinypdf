@@ -1,0 +1,17 @@
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+.DS_Store
+__MACOSX
+.env
+.env.*
+!.env.example
+*.md
+LICENSE
+Dockerfile
+docker-compose.yml
+bin
+dist
+*.test

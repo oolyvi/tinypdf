@@ -1,0 +1,19 @@
+services:
+  pdf-compress:
+    build: .
+    image: pdf-compress:latest
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      MAX_UPLOAD_MB: "${MAX_UPLOAD_MB:-0}"
+      MAX_CONCURRENT_JOBS: "${MAX_CONCURRENT_JOBS:-2}"
+      JOB_TIMEOUT_SECONDS: "${JOB_TIMEOUT_SECONDS:-300}"
+    restart: unless-stopped
+    # Hardening: the app runs as a non-root user with no extra privileges.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # Ghostscript can use a lot of RAM on big PDFs; cap it so one job can't take the host down.
+    mem_limit: 2g

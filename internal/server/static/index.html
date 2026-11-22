@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title data-i18n="title">PDF Compressor</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        :root {
+            color-scheme: light dark;
+            --bg: #ffffff;
+            --fg: #1f2937;
+            --muted: #475569;
+            --card-bg: #f8fafc;
+            --border: #cbd5e1;
+            --input-bg: #ffffff;
+            --accent: #2563eb;
+            --disabled: #94a3b8;
+            --danger: #b91c1c;
+            --ok: #15803d;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --fg: #e2e8f0;
+                --muted: #94a3b8;
+                --card-bg: #1e293b;
+                --border: #475569;
+                --input-bg: #0f172a;
+                --danger: #f87171;
+                --ok: #4ade80;
+            }
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5;
+            color: var(--fg);
+            background: var(--bg);
+            padding-top: max(clamp(0.75rem, 5vh, 3rem), env(safe-area-inset-top));
+            padding-bottom: max(clamp(0.75rem, 5vh, 3rem), env(safe-area-inset-bottom));
+            padding-left: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-left));
+            padding-right: max(clamp(1rem, 4vw, 2rem), env(safe-area-inset-right));
+        }
+
+        main {
+            width: 100%;
+            max-width: 560px;
+            margin: auto;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 0.5rem;
+        }
+
+        #langSelect {
+            min-height: 40px;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--input-bg);
+            color: inherit;
+            cursor: pointer;
+        }
+
+        #langSelect:focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        h1 {
+            font-size: clamp(1.25rem, min(4.5vw, 5vh), 1.9rem);
+            margin: 0 0 0.5rem;
+            line-height: 1.2;
+        }
+
+        .intro {
+            margin: 0 0 clamp(0.75rem, 2.5vh, 1.25rem);
+            color: var(--muted);
+            font-size: clamp(0.9rem, 2.8vw, 1rem);
+        }
+
+        .card {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: clamp(0.85rem, 4vh, 2rem) clamp(1rem, 5vw, 2rem);
+            background: var(--card-bg);
+        }
+
+        .field {
+            margin: 0 0 clamp(0.6rem, 2vh, 1rem);
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+        }
+
+        input[type="file"], input[type="number"] {
+            width: 100%;
+            min-height: 44px;
+            padding: 0.6rem;
+            font-size: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--input-bg);
+            color: inherit;
+        }
+
+        input[type="file"] {
+            max-width: 100%;
+        }
+
+        .picker {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        input[type="file"].sr-only {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 1px;
+            height: 1px;
+            min-height: 0;
+            padding: 0;
+            border: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        label.file-btn {
+            display: inline-flex;
+            align-items: center;
+            min-height: 44px;
+            margin: 0;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--input-bg);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .picker input:focus-visible ~ .file-btn {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        #noFile {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        #noFile[hidden] {
+            display: none;
+        }
+
+        input:focus-visible, button:focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            min-height: 48px;
+            margin-top: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        button:disabled {
+            background: var(--disabled);
+            cursor: not-allowed;
+        }
+
+        .file-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .file-row[hidden] {
+            display: none;
+        }
+
+        #fileInfo {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .link-btn {
+            width: auto;
+            min-height: 40px;
+            margin: 0;
+            padding: 0.25rem 0.75rem;
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid currentColor;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .link-btn:disabled {
+            background: transparent;
+            color: var(--disabled);
+        }
+
+        #status {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--muted);
+            min-height: 1.3em;
+            overflow-wrap: anywhere;
+        }
+
+        #status.error {
+            color: var(--danger);
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .actions button {
+            margin-top: 0;
+        }
+
+        .actions #submitBtn {
+            flex: 1 1 auto;
+        }
+
+        button.secondary {
+            width: auto;
+            flex: 0 0 auto;
+            background: transparent;
+            color: var(--fg);
+            border: 1px solid var(--border);
+        }
+
+        button.secondary:disabled {
+            background: transparent;
+            color: var(--disabled);
+        }
+
+        button.secondary.cancel {
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .result {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--input-bg);
+        }
+
+        .result[hidden] {
+            display: none;
+        }
+
+        .result .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 1rem;
+            padding: 0.2rem 0;
+            font-size: 0.95rem;
+        }
+
+        .result dt {
+            color: var(--muted);
+        }
+
+        .result dd {
+            margin: 0;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+
+        .result .saved dd {
+            color: var(--ok);
+        }
+
+        .result dl {
+            margin: 0;
+        }
+
+        .result button {
+            margin-top: 0.6rem;
+            width: 100%;
+        }
+
+        @media (max-width: 380px) {
+            .file-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .link-btn {
+                width: 100%;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            button.secondary {
+                width: 100%;
+            }
+        }
+
+        @media (max-height: 560px) {
+            .intro {
+                font-size: 0.85rem;
+            }
+
+            input[type="file"], input[type="number"] {
+                min-height: 40px;
+                padding: 0.4rem 0.6rem;
+            }
+
+            button {
+                min-height: 42px;
+                margin-top: 0.5rem;
+                padding-top: 0.5rem;
+                padding-bottom: 0.5rem;
+            }
+        }
+
+        @media (max-height: 400px) {
+            .intro {
+                display: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition: none !important;
+                animation: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<main>
+    <div class="topbar">
+        <select id="langSelect" data-i18n-aria="langLabel" aria-label="Language">
+            <option value="en">English</option>
+            <option value="az">Azərbaycanca</option>
+        </select>
+    </div>
+    <h1 data-i18n="title">PDF Compressor</h1>
+    <p class="intro" data-i18n="intro">Pick a PDF and the size reduction you want. The file is compressed on the
+        computer or server that
+        runs this app (it is not sent to any third party) and the temporary copies are deleted right after you get your
+        download.</p>
+    <div class="card">
+        <form id="uploadForm">
+            <div class="field">
+                <label for="pdfFile" data-i18n="pdfFile">PDF file</label>
+                <div class="picker">
+                    <input type="file" id="pdfFile" name="pdf" class="sr-only" accept="application/pdf,.pdf" required/>
+                    <label for="pdfFile" class="file-btn" data-i18n="chooseFile">Choose file</label>
+                    <span id="noFile" data-i18n="noFile">No file chosen</span>
+                </div>
+                <div id="fileRow" class="file-row" hidden>
+                    <span id="fileInfo"></span>
+                    <button type="button" id="removeBtn" class="link-btn" data-i18n="remove"
+                            data-i18n-aria="removeAria" aria-label="Remove selected file">✕ Remove
+                    </button>
+                </div>
+            </div>
+            <div class="field">
+                <label for="targetReduction" data-i18n="target">Target size reduction (%)</label>
+                <input type="number" id="targetReduction" name="target_reduction" min="1" max="90" value="30"/>
+            </div>
+            <div class="actions">
+                <button type="submit" id="submitBtn" data-i18n="submit">Compress &amp; Download</button>
+                <button type="button" id="resetBtn" class="secondary">Reset</button>
+            </div>
+        </form>
+        <div id="status" role="status" aria-live="polite"></div>
+        <div id="result" class="result" hidden>
+            <dl>
+                <div class="row">
+                    <dt data-i18n="resOrig">Original size</dt>
+                    <dd id="resOrig"></dd>
+                </div>
+                <div class="row">
+                    <dt data-i18n="resNew">Compressed size</dt>
+                    <dd id="resNew"></dd>
+                </div>
+                <div class="row saved">
+                    <dt data-i18n="resSaved">Saved</dt>
+                    <dd id="resSaved"></dd>
+                </div>
+            </dl>
+            <button type="button" id="againBtn" class="secondary" data-i18n="again">Download again</button>
+        </div>
+    </div>
+</main>
+
+<script>
+    const I18N = {
+        en: {
+            title: 'PDF Compressor',
+            langLabel: 'Language',
+            intro: 'Pick a PDF and the size reduction you want. The file is compressed on the computer or server that runs this app (it is not sent to any third party) and the temporary copies are deleted right after you get your download.',
+            pdfFile: 'PDF file',
+            chooseFile: 'Choose file',
+            noFile: 'No file chosen',
+            remove: '✕ Remove',
+            removeAria: 'Remove selected file',
+            target: 'Target size reduction (%)',
+            submit: 'Compress & Download',
+            reset: 'Reset',
+            cancel: 'Cancel',
+            resOrig: 'Original size',
+            resNew: 'Compressed size',
+            resSaved: 'Saved',
+            again: 'Download again',
+            nothingSaved: 'Nothing (already optimal)',
+            uploading: 'Uploading & compressing ({size})…',
+            done: 'Done! Your download has started.',
+            doneNotMet: 'Done! Note: this PDF could not be reduced by the requested amount.',
+            cancelled: 'Cancelled.',
+            errorPrefix: 'Error: ',
+            notPdf: '"{name}" is not a PDF. Please choose a .pdf file.',
+            errGeneric: 'Compression failed ({status})',
+            errNetwork: 'Network error. Please check your connection and try again.',
+            errBusy: 'Server is busy, please try again shortly',
+            errTooLarge: 'File too large (limit is {mb} MB)',
+            errNotPdf: 'File is not a valid PDF',
+            errCompress: 'Could not compress this PDF (it may be corrupted or encrypted)',
+            errTimeout: 'Compression took too long',
+            errStorage: 'Server storage error',
+            errRead: 'Failed to read compressed file',
+            errNoFile: 'No PDF file provided',
+            errBadRequest: 'Invalid request'
+        },
+        az: {
+            title: 'PDF Sıxışdırıcı',
+            langLabel: 'Dil',
+            intro: 'PDF faylını və istədiyiniz ölçü azalmasını seçin. Fayl bu tətbiqi işlədən kompüterdə və ya serverdə sıxışdırılır (heç bir üçüncü tərəfə göndərilmir) və müvəqqəti nüsxələr yükləməni aldıqdan dərhal sonra silinir.',
+            pdfFile: 'PDF faylı',
+            chooseFile: 'Fayl seçin',
+            noFile: 'Fayl seçilməyib',
+            remove: '✕ Sil',
+            removeAria: 'Seçilmiş faylı sil',
+            target: 'Hədəf ölçü azalması (%)',
+            submit: 'Sıxışdır və yüklə',
+            reset: 'Sıfırla',
+            cancel: 'Ləğv et',
+            resOrig: 'Orijinal ölçü',
+            resNew: 'Sıxışdırılmış ölçü',
+            resSaved: 'Qənaət',
+            again: 'Yenidən yüklə',
+            nothingSaved: 'Heç nə (artıq optimaldır)',
+            uploading: 'Yüklənir və sıxışdırılır ({size})…',
+            done: 'Hazırdır! Yükləmə başladı.',
+            doneNotMet: 'Hazırdır! Qeyd: bu PDF istənilən qədər kiçildilə bilmədi.',
+            cancelled: 'Ləğv edildi.',
+            errorPrefix: 'Xəta: ',
+            notPdf: '"{name}" PDF deyil. Zəhmət olmasa .pdf faylı seçin.',
+            errGeneric: 'Sıxışdırma alınmadı ({status})',
+            errNetwork: 'Şəbəkə xətası. Bağlantınızı yoxlayıb yenidən cəhd edin.',
+            errBusy: 'Server məşğuldur, zəhmət olmasa bir azdan yenidən cəhd edin',
+            errTooLarge: 'Fayl çox böyükdür (limit {mb} MB)',
+            errNotPdf: 'Fayl etibarlı PDF deyil',
+            errCompress: 'Bu PDF-i sıxışdırmaq mümkün olmadı (zədələnmiş və ya şifrəli ola bilər)',
+            errTimeout: 'Sıxışdırma çox uzun çəkdi',
+            errStorage: 'Server yaddaş xətası',
+            errRead: 'Sıxışdırılmış faylı oxumaq alınmadı',
+            errNoFile: 'PDF fayl göndərilməyib',
+            errBadRequest: 'Yanlış sorğu'
+        }
+    };
+
+    const SERVER_ERRORS = [
+        [/^Server is busy/i, 'errBusy'],
+        [/^File too large \(limit is (\d+) MB\)/i, 'errTooLarge', m => ({mb: m[1]})],
+        [/^file is not a valid PDF/i, 'errNotPdf'],
+        [/^Could not compress this PDF/i, 'errCompress'],
+        [/^Compression took too long/i, 'errTimeout'],
+        [/^Server storage error/i, 'errStorage'],
+        [/^Failed to read compressed file/i, 'errRead'],
+        [/^no PDF file provided/i, 'errNoFile'],
+        [/^invalid multipart request/i, 'errBadRequest']
+    ];
+
+    const LANG_KEY = 'pdfcompress.lang';
+    const DEFAULT_TARGET = 30;
+
+    let lang = 'en';
+
+    function detectLang() {
+        try {
+            const saved = localStorage.getItem(LANG_KEY);
+            if (saved && I18N[saved]) return saved;
+        } catch (_) {
+        }
+        const nav = (navigator.languages && navigator.languages[0]) || navigator.language || 'en';
+        return nav.toLowerCase().startsWith('az') ? 'az' : 'en';
+    }
+
+    function t(key, params = {}) {
+        const text = (I18N[lang] && I18N[lang][key]) ?? I18N.en[key] ?? key;
+        return text.replace(/\{(\w+)\}/g, (_, k) => (k in params ? params[k] : `{${k}}`));
+    }
+
+    const form = document.getElementById('uploadForm');
+    const status = document.getElementById('status');
+    const btn = document.getElementById('submitBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const targetInput = document.getElementById('targetReduction');
+    const langSelect = document.getElementById('langSelect');
+
+    const fileInput = document.getElementById('pdfFile');
+    const fileRow = document.getElementById('fileRow');
+    const fileInfo = document.getElementById('fileInfo');
+    const noFile = document.getElementById('noFile');
+    const removeBtn = document.getElementById('removeBtn');
+
+    const result = document.getElementById('result');
+    const resOrig = document.getElementById('resOrig');
+    const resNew = document.getElementById('resNew');
+    const resSaved = document.getElementById('resSaved');
+    const againBtn = document.getElementById('againBtn');
+
+    let controller = null;
+    let resultUrl = null;
+    let resultName = '';
+    let statusState = null;
+    let resultSizes = null;
+
+    function fmtNumber(n, digits) {
+        try {
+            return new Intl.NumberFormat(lang, {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            }).format(n);
+        } catch (_) {
+            return n.toFixed(digits);
+        }
+    }
+
+    function fmtSize(bytes) {
+        if (bytes < 1000) return `${bytes} B`;
+        const units = ['KB', 'MB', 'GB', 'TB'];
+        let v = bytes / 1000, i = 0;
+        while (v >= 1000 && i < units.length - 1) {
+            v /= 1000;
+            i++;
+        }
+        return `${fmtNumber(v, i >= 2 ? 2 : 1)} ${units[i]}`;
+    }
+
+    function renderStatus() {
+        if (!statusState) {
+            status.textContent = '';
+            status.classList.remove('error');
+            return;
+        }
+        const {key, params, raw, isError} = statusState;
+        const text = raw !== undefined ? raw : t(key, params);
+        status.textContent = (isError && key !== 'notPdf' ? t('errorPrefix') : '') + text;
+        status.classList.toggle('error', !!isError);
+    }
+
+    function setStatus(key, params = {}, isError = false) {
+        statusState = key ? {key, params, isError} : null;
+        renderStatus();
+    }
+
+    function setStatusRaw(raw, isError = true) {
+        statusState = {key: null, raw, isError};
+        renderStatus();
+    }
+
+    function setErrorStatus(err) {
+        if (err instanceof TypeError) {
+            setStatus('errNetwork', {}, true);
+            return;
+        }
+        const msg = (err && err.message) || '';
+        for (const [re, key, getParams] of SERVER_ERRORS) {
+            const m = msg.match(re);
+            if (m) {
+                setStatus(key, getParams ? getParams(m) : {}, true);
+                return;
+            }
+        }
+        if (err && err.status) {
+            setStatus('errGeneric', {status: err.status}, true);
+        } else {
+            setStatusRaw(msg, true);
+        }
+    }
+
+    function renderResult() {
+        if (!resultSizes) return;
+        const {orig, now} = resultSizes;
+        const saved = orig - now;
+        resOrig.textContent = fmtSize(orig);
+        resNew.textContent = fmtSize(now);
+        resSaved.textContent = saved > 0
+            ? `${fmtSize(saved)} (${fmtNumber(saved / orig * 100, 1)}%)`
+            : t('nothingSaved');
+    }
+
+    function clearResult() {
+        if (resultUrl) URL.revokeObjectURL(resultUrl);
+        resultUrl = null;
+        resultName = '';
+        resultSizes = null;
+        result.hidden = true;
+    }
+
+    function syncPicker() {
+        noFile.hidden = !fileRow.hidden;
+    }
+
+    function clearFile() {
+        fileInput.value = '';
+        fileRow.hidden = true;
+        fileInfo.textContent = '';
+        syncPicker();
+    }
+
+    function renderResetLabel() {
+        resetBtn.textContent = controller ? t('cancel') : t('reset');
+    }
+
+    function setBusy(busy) {
+        btn.disabled = busy;
+        removeBtn.disabled = busy;
+        againBtn.disabled = busy;
+        renderResetLabel();
+        resetBtn.classList.toggle('cancel', busy);
+    }
+
+    function applyLang(next) {
+        lang = I18N[next] ? next : 'en';
+        document.documentElement.lang = lang;
+        langSelect.value = lang;
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            el.textContent = t(el.dataset.i18n);
+        });
+        document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+            el.setAttribute('aria-label', t(el.dataset.i18nAria));
+        });
+        document.title = t('title');
+        renderResetLabel();
+        renderStatus();
+        renderResult();
+        syncPicker();
+        const file = fileInput.files[0];
+        if (file && !fileRow.hidden) fileInfo.textContent = `${file.name} (${fmtSize(file.size)})`;
+    }
+
+    function looksLikePdf(file) {
+        return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    }
+
+    function triggerDownload(url, name) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+
+    function showResult(origBytes, newBytes) {
+        resultSizes = {orig: origBytes, now: newBytes};
+        renderResult();
+        result.hidden = false;
+    }
+
+    langSelect.addEventListener('change', () => {
+        applyLang(langSelect.value);
+        try {
+            localStorage.setItem(LANG_KEY, lang);
+        } catch (_) { /* ignore */
+        }
+    });
+
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        clearResult();
+        if (!file) {
+            clearFile();
+            return;
+        }
+        if (!looksLikePdf(file)) {
+            const name = file.name;
+            clearFile();
+            setStatus('notPdf', {name}, true);
+            return;
+        }
+        fileInfo.textContent = `${file.name} (${fmtSize(file.size)})`;
+        fileInfo.title = file.name;
+        fileRow.hidden = false;
+        syncPicker();
+        setStatus(null);
+    });
+
+    removeBtn.addEventListener('click', () => {
+        clearFile();
+        clearResult();
+        setStatus(null);
+    });
+
+    resetBtn.addEventListener('click', () => {
+        if (controller) {
+            controller.abort();
+            return;
+        }
+        form.reset();
+        targetInput.value = DEFAULT_TARGET;
+        clearFile();
+        clearResult();
+        setStatus(null);
+    });
+
+    againBtn.addEventListener('click', () => {
+        if (resultUrl) triggerDownload(resultUrl, resultName);
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const file = fileInput.files[0];
+        if (!file || controller) return;
+
+        const target = Math.min(90, Math.max(1, Number(targetInput.value) || DEFAULT_TARGET));
+
+        const formData = new FormData();
+        formData.append('target_reduction', String(target));
+        formData.append('pdf', file);
+
+        clearResult();
+        controller = new AbortController();
+        setBusy(true);
+        setStatus('uploading', {size: fmtSize(file.size)});
+
+        try {
+            const response = await fetch('/compress', {method: 'POST', body: formData, signal: controller.signal});
+            if (!response.ok) {
+                const err = new Error((await response.text()).trim());
+                err.status = response.status;
+                throw err;
+            }
+
+            const targetMet = response.headers.get('X-Target-Met') === 'true';
+            const blob = await response.blob();
+            const origBytes = Number(response.headers.get('X-Original-Size')) || file.size;
+            const newBytes = Number(response.headers.get('X-Compressed-Size')) || blob.size;
+
+            resultUrl = URL.createObjectURL(blob);
+            resultName = 'compressed_' + file.name;
+            triggerDownload(resultUrl, resultName);
+            showResult(origBytes, newBytes);
+
+            setStatus(targetMet ? 'done' : 'doneNotMet');
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                setStatus('cancelled');
+            } else {
+                setErrorStatus(err);
+            }
+        } finally {
+            controller = null;
+            setBusy(false);
+        }
+    });
+
+    applyLang(detectLang());
+</script>
+</body>
+</html>
