@@ -134,29 +134,3 @@ Returns `200 ok`. The Docker image uses it for its `HEALTHCHECK` (via `pdf_compr
 ### `GET /`
 
 The web UI.
-
-## Deployment notes
-
-- **Use HTTPS.** Put the container behind a reverse proxy that terminates TLS (Caddy, Nginx, Traefik, or your cloud load
-  balancer).
-- **Raise proxy limits** to match your settings: for Nginx, `client_max_body_size` (≥ `MAX_UPLOAD_MB`) and
-  `proxy_read_timeout` (≥ `JOB_TIMEOUT_SECONDS`).
-- **There is no authentication.** If the service is public, add auth and rate limiting at the proxy, and set
-  `MAX_UPLOAD_MB` to something sensible.
-- **Size the host for Ghostscript.** Each job can use significant CPU and RAM. Tune `MAX_CONCURRENT_JOBS` and the
-  Compose `mem_limit` together.
-- Works out of the box on Fly.io, Railway, Render, Cloud Run, or any VPS with Docker; just route traffic to `$PORT`.
-
-## Development
-
-```bash
-go test ./...
-```
-
-The Ghostscript end-to-end test is skipped automatically when `gs` isn't installed.
-
-```
-main.go                config, startup, graceful shutdown, -healthcheck flag
-internal/compress/     Ghostscript wrapper and size-targeting search
-internal/server/       HTTP handlers, upload handling, embedded single-page UI
-```
