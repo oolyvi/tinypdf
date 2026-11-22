@@ -8,11 +8,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 var ErrNotPDF = errors.New("file is not a valid PDF")
 
-const searchSteps = 6
+const (
+	searchSteps = 4
+	tolerance   = 0.10
+)
 
 type Compressor struct {
 	GSBin string
@@ -78,6 +82,7 @@ func (c *Compressor) ToTarget(ctx context.Context, dir, in string, origSize, tar
 	var (
 		under, over         string
 		underSize, overSize int64
+		lastPass            time.Duration
 	)
 	drop := func(p string) {
 		if p != "" {
@@ -87,13 +92,26 @@ func (c *Compressor) ToTarget(ctx context.Context, dir, in string, origSize, tar
 
 	low, high := 0, 100
 	for step := 0; step < searchSteps && low <= high; step++ {
+		if dl, ok := ctx.Deadline(); ok && step > 0 {
+			if time.Until(dl) < lastPass*3/2 && (under != "" || over != "") {
+				break
+			}
+		}
+
 		mid := (low + high) / 2
 		dpi, q := LevelParams(mid)
 
 		candidate := filepath.Join(dir, fmt.Sprintf("pass_%d.pdf", step))
+		t0 := time.Now()
 		if err := c.run(ctx, in, candidate, dpi, q); err != nil {
+			if ctx.Err() != nil && (under != "" || over != "") {
+				_ = os.Remove(candidate)
+				break
+			}
 			return "", err
 		}
+		lastPass = time.Since(t0)
+
 		info, err := os.Stat(candidate)
 		if err != nil {
 			return "", err
@@ -107,7 +125,7 @@ func (c *Compressor) ToTarget(ctx context.Context, dir, in string, origSize, tar
 			} else {
 				drop(candidate)
 			}
-			if float64(targetBytes-size) <= float64(origSize)*0.02 {
+			if float64(targetBytes-size) <= float64(origSize)*tolerance {
 				break
 			}
 			high = mid - 1

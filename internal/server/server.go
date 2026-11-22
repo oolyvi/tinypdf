@@ -228,6 +228,9 @@ func (s *Server) receiveUpload(r *http.Request, inPath string) (name string, siz
 }
 
 func (s *Server) losslessOptimize(ctx context.Context, in, out string) string {
+	if dl, ok := ctx.Deadline(); ok && time.Until(dl) < 15*time.Second {
+		return in
+	}
 	conf, err := api.LoadConfiguration(api.ConfigurationOptions{Mode: api.ConfigurationModeStateless})
 	if err != nil {
 		return in
